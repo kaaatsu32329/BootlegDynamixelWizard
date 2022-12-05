@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.12)
-project(Siv3DLearn CXX)
+
+file(GLOB cpp_src "src/*.cpp")
+file(GLOB cpp_include "include")
+
+file(GLOB dynamixel_sdk_src "dynamixel_sdk/src/dynamixel_sdk/*.cpp")
+file(GLOB dynamixel_sdk_include "dynamixel_sdk/include/dynamixel_sdk")
+
+project(BDWizard CXX)
 
 if (NOT CMAKE_CONFIGURATION_TYPES AND
     NOT CMAKE_NO_BUILD_TYPE AND
@@ -11,8 +18,14 @@ endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 
+include_directories(
+    ${dynamixel_sdk_include}
+    ${cpp_include}
+)
+
 add_executable(Bootleg
-  src/Main.cpp
+  ${cpp_src}
+  ${dynamixel_sdk_src}
 )
 
 find_package(Siv3D)
