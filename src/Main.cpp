@@ -86,8 +86,6 @@ void Main()
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
             }
 
-            Console << U"Position mode? -> " << dxl_error;
-
             SimpleGUI::Slider(U"Position {:.0f}"_fmt(position), position, 1536, 2388, Vec2{100, 300}, 150.0, 300.0);
 
             if (SimpleGUI::Button(U"Rotation", Vec2{300, 40}))
@@ -98,8 +96,6 @@ void Main()
                 Print << U"Tgt: " << (int32_t)position;
 
                 packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode_position, &dxl_error);
-
-                Console << U"Mode: " << mode_position;
 
                 packetHandler->write4ByteTxRx(portHandler, ID2, ADDR_GOAL_POSITION, (int32_t)position, &dxl_error);
             }
