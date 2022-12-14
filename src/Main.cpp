@@ -7,7 +7,7 @@
 #define PORT_NAME "/dev/ttyUSB0"
 #define PROTOCOL 2.0
 #define BAUDRATE 1000000
-#define ID2 6
+#define ID2 8
 
 #define TORQUE_ENABLE 1
 #define TORQUE_DISABLE 0
@@ -53,9 +53,11 @@ void Main()
     uint32_t target_position = (max_position - min_position) / 2.0 + min_position;
     Print << U"Tgt: " << target_position;
 
-    uint32_t present_position = 0;
+    int32_t present_position = 0;
     packetHandler->read4ByteTxRx(portHandler, ID2, ADDR_PRESENT_POSITION, (uint32_t *)&present_position, &dxl_error);
     Print << U"Pst: " << present_position;
+
+    uint8_t mode = 12;
 
     PIDController pid_controller = PIDController(0.2, 0.0, 0.0);
 
@@ -83,7 +85,10 @@ void Main()
             {
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE, &dxl_error);
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, OPERATING_MODE_POSITION, &dxl_error);
+                Console << U"Position err -> " << dxl_error;
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+                packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode, &dxl_error);
+                Console << U"Current mode: " << mode;
             }
 
             SimpleGUI::Slider(U"Position {:.0f}"_fmt(position), position, 1536, 2388, Vec2{100, 300}, 150.0, 300.0);
@@ -97,22 +102,25 @@ void Main()
 
                 packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode_position, &dxl_error);
 
-                packetHandler->write4ByteTxRx(portHandler, ID2, ADDR_GOAL_POSITION, (int32_t)position, &dxl_error);
+                packetHandler->write4ByteTxRx(portHandler, ID2, ADDR_GOAL_POSITION, (uint32_t)position, &dxl_error);
             }
             latest_index = POSITION_MODE;
         }
 
         if (index == IN_RANGE)
         {
+            if (index != latest_index)
+            {
+                packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE, &dxl_error);
+                packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, OPERATING_MODE_VELOCITY, &dxl_error);
+                Console << U"In range err -> " << dxl_error;
+                packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+                packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode, &dxl_error);
+                Console << U"Current mode: " << mode;
+            }
+
             if (SimpleGUI::Button(U"In Range", Vec2{300, 40}))
             {
-                if (index != latest_index)
-                {
-                    packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE, &dxl_error);
-                    packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, OPERATING_MODE_VELOCITY, &dxl_error);
-                    packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
-                }
-
                 while (present_position >= max_position || present_position <= min_position)
                 {
                     packetHandler->read4ByteTxRx(portHandler, ID2, ADDR_PRESENT_POSITION, (uint32_t *)&present_position, &dxl_error);
@@ -134,9 +142,13 @@ void Main()
         {
             if (index != latest_index)
             {
+                velocity = 0;
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE, &dxl_error);
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, OPERATING_MODE_VELOCITY, &dxl_error);
+                Console << U"Velocity err -> " << dxl_error;
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+                packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode, &dxl_error);
+                Console << U"Current mode: " << mode;
             }
 
             SimpleGUI::Slider(U"Velocity {:.0f}"_fmt(velocity), velocity, -200.0, 200.0, Vec2{100, 300}, 150.0, 300.0);
@@ -154,9 +166,13 @@ void Main()
         {
             if (index != latest_index)
             {
+                torque = 0;
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_DISABLE, &dxl_error);
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, OPERATING_MODE_TORQUE, &dxl_error);
+                Console << U"Torque err -> " << dxl_error;
                 packetHandler->write1ByteTxRx(portHandler, ID2, ADDR_TORQUE_ENABLE, TORQUE_ENABLE, &dxl_error);
+                packetHandler->read1ByteTxRx(portHandler, ID2, ADDR_OPERATING_MODE, (uint8_t *)&mode, &dxl_error);
+                Console << U"Current mode: " << mode;
             }
             SimpleGUI::Slider(U"Torque {:.0f}"_fmt(torque), torque, -1000.0, 1000.0, Vec2{100, 300}, 150.0, 300.0);
 
@@ -165,7 +181,7 @@ void Main()
                 torque = 0;
             }
 
-            packetHandler->write4ByteTxRx(portHandler, ID2, ADDR_GOAL_VELOCITY, (int32_t)torque, &dxl_error);
+            packetHandler->write2ByteTxRx(portHandler, ID2, ADDR_GOAL_CURRENT, (int16_t)torque, &dxl_error);
             latest_index = TORQUE_MODE;
         }
     }
