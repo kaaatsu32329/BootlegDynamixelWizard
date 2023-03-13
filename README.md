@@ -15,7 +15,7 @@ cd ..
 cmake --build build
 ```
 
-Normal time
+Build
 
 ```bash
 cmake --build build
